@@ -4,6 +4,10 @@ from phonenumber_field.modelfields import PhoneNumberField
 from django.utils.safestring import mark_safe
 from django.core.validators import FileExtensionValidator
 
+#added kb
+from django.utils import timezone
+from decimal import Decimal
+
 # get user model
 User = get_user_model()
 
@@ -50,4 +54,69 @@ class Task(models.Model):
     def __str__(self):
         return self.title
     
+class Journey(models.Model):
+    task = models.OneToOneField(Task,on_delete=models.CASCADE)
+    #STARTS FROM HERE !
+    starting_point = models.PointField()
+    ending_point = models.PointField()
+    distance = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    starting_time = models.DateTimeField(default=timezone.now)
+    ending_time = models.DateTimeField(null=True)
+    def save(self, *args, **kwargs):
+        if self.starting_point and self.ending_point:
+            self.distance = Decimal(self.starting_point.distance(self.ending_point))
+        super().save(*args, **kwargs)
+
+    def elapsed_time(self):
+        if self.ending_time:
+            return self.ending_time - self.starting_time
+        else:
+            return None
     
+class Services(models.Model):
+    service_name = models.CharField(max_length=255)
+    cost = models.DecimalField(max_digits=6, decimal_places=2)
+
+    starting_point = models.PointField()
+    ending_point = models.PointField()
+    distance = models.FloatField()
+    cost_per_km = models.DecimalField(max_digits=8, decimal_places=2)
+    total_cost = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+
+    def calculate_distance(self):
+        return self.starting_point.distance(self.ending_point)
+
+    def save(self, *args, **kwargs):
+        self.distance = self.calculate_distance()
+        if self.cost_per_km and self.distance:
+            self.total_cost = self.cost_per_km * self.distance
+        super(Services, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Route from {self.starting_point} to {self.ending_point} ({self.distance} km, {self.total_cost} cost)"
+    
+
+class UmusareWage(models.Model):
+    rider = models.ForeignKey(UmusareRider, on_delete=models.PROTECT)
+    task = models.ForeignKey(Task, on_delete=models.PROTECT)
+    amount = models.DecimalField(max_digits=6, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    class status(models.TextChoices):
+        SELECT = "", "Select status"
+        MALE = "pending", "pending"
+        FEMALE = "payed", "payed"
+    status = models.CharField(verbose_name="STATUS", choices=status.choices, default=status.SELECT, max_length=10)
+
+class Clients(models.Model):
+    user = models.ForeignKey(User, verbose_name="User", on_delete=models.CASCADE)
+    phone_number = PhoneNumberField(verbose_name = "Phone Number",blank=True, unique=True)
+
+class ClientProperty(models.Model):
+    Client = models.ForeignKey(Clients,on_delete=models.PROTECT)
+    class car_brand(models.TextChoices):
+        SELECT = "", "Select Car Brand"
+        MALE = "toyota", "toyota"
+        FEMALE = "benz", "benz"
+    car_brand = models.CharField(verbose_name="car_brand", choices=car_brand.choices, default=car_brand.SELECT, max_length=10)
+    plate_number = models.CharField(max_length=12)
+    vehicle_insurance=models.CharField(max_length=12)
