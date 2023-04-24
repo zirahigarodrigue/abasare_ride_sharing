@@ -13,7 +13,7 @@ SECRET_KEY = 'django-insecure-u&njxrl7$i6(9@*s7!+12(nctd*5ob97)ordm%)(kw2ei7@^s)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -36,6 +36,7 @@ INSTALLED_APPS = [
 
 
     'users',
+    'SafeRide',
 ]
 
 MIDDLEWARE = [
@@ -141,3 +142,4 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 
 }
+

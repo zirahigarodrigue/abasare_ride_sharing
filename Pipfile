@@ -13,6 +13,7 @@ mysqlclient = "*"
 markdown = "*"
 django-phonenumber-field = {extras = ["phonenumbers"], version = "*"}
 drf-spectacular = {extras = ["sidecar"], version = "*"}
+django-map-widgets = "*"
 
 [dev-packages]
 
