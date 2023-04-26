@@ -1,8 +1,0 @@
-# from rest_framework.authentication import TokenAuthentication
-# from rest_framework.permissions import IsAuthenticated
-
-# class UmusareRiderList(generics.ListAPIView):
-#     authentication_classes = [TokenAuthentication]
-#     permission_classes = [IsAuthenticated]
-#     queryset = UmusareRider.objects.all()
-#     serializer_class = UmusareRiderSerializer

@@ -29,7 +29,6 @@ INSTALLED_APPS = [
     # 3rd parties
     'phonenumber_field',
     'rest_framework',
-    'rest_framework.authtoken',
     # 'django-filter',
     'drf_spectacular',
     # 'drf_spectacular_sidecar',
@@ -127,10 +126,13 @@ swappable = 'AUTH_USER_MODEL'
 
 
 REST_FRAMEWORK = {
-    # Use Django's standard `django.contrib.auth` permissions,
-    # or allow read-only access for unauthenticated users.
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }

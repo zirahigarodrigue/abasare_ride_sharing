@@ -40,3 +40,12 @@ class ClientPropertyListCreateView(generics.ListCreateAPIView):
 class ClientRequestListCreateView(generics.ListCreateAPIView):
     queryset = ClientRequest.objects.all()
     serializer_class = ClientRequestSerializer
+
+# clss LoginView(geneircAPIView):
+#     def post(self,request):
+#         data = request.data
+#         username =('username', '')
+#         password =('password', '')
+        
+
+
