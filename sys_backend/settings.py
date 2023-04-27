@@ -145,3 +145,11 @@ SPECTACULAR_SETTINGS = {
 
 }
 
+# Email backend settings
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "rodrigueishara@gmail.com"
+EMAIL_HOST_PASSWORD = "ftpkfslnfmioyjyy"
+DEFAULT_FROM_EMAIL = "rodrigueishara@gmail.com"
