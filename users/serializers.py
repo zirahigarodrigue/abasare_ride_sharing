@@ -1,108 +1,96 @@
-from django.urls import reverse
-from django.core.mail import EmailMessage
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.utils.encoding import smart_str, force_str, smart_bytes, DjangoUnicodeDecodeError, force_bytes
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.contrib.sites.shortcuts import get_current_site
+from datetime import datetime, timedelta
+from django.contrib.auth import get_user_model, authenticate, password_validation
 from django.conf import settings
-from django.template.loader import render_to_string
-from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
+
+import jwt
 
 from rest_framework import serializers
-from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
+
+from SafeRide.serializers import UmusareRiderSerializer, ClientsSerializer
 
 User = get_user_model()
 
-
-class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(
-        max_length=68, min_length=6, write_only=True
-    )
-    password_confirm = serializers.CharField(
-        max_length=68, min_length=6, write_only=True
-    )
-    token = serializers.CharField(max_length=500, read_only=True)
-
-    class Meta:
-        model = User
-        fields = ['first_name', 'last_name', 'email', 'password', 'password_confirm', 'is_vehicle_owner', 'is_umusare_rider', 'token']
-
-    def validate(self, attrs):
-        email = attrs.get('email', '')
-        if User.objects.filter(email=email).exists():
-            raise serializers.ValidationError({'email': 'Email is already in use'})
-        password = attrs.get('password', '')
-        password_confirm = attrs.get('password_confirm', '')
-        if password != password_confirm:
-            raise serializers.ValidationError({'password': 'Passwords do not match'})
-        return attrs
-
-    def create(self, validated_data):
-        validated_data.pop('password_confirm')
-        user = User.objects.create_user(**validated_data)
-        user.is_active = False
-        user.save()
-        current_site = get_current_site(self.context['request']).domain
-        uidb64 = urlsafe_base64_encode(smart_bytes(user.pk))
-        token = PasswordResetTokenGenerator().make_token(user)
-        activation_link = reverse('activation', kwargs={'uidb64': uidb64, 'token': token})
-        activate_url = 'http://' + current_site + activation_link
-
-        message = EmailMessage(
-            subject='Activate your account',
-            body =f'Please click here on this link to activate your account: {activate_url}',
-            to=[user.email]
-        )
-        message.send()
-        return Response(serializers.data)
-
-class AccountActivationSerializer(serializers.Serializer):
-    token = serializers.CharField()
-    uidb64 = serializers.CharField()
-
-    def validate(self, attrs):
-        try:
-            uid = urlsafe_base64_decode(attrs['uidb64'])
-            user = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            raise ValidationError({'error': 'Invalid activation link'})
-
-        if PasswordResetTokenGenerator().check_token(user, attrs['token']):
-            user.is_active = True
-            user.save()
-            return attrs
-        else:
-            raise ValidationError({'error': 'Invalid activation link'})
-
-
 class UserSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=False)
-    
+    rider_profile = UmusareRiderSerializer(read_only=True)
+    client_profile = ClientsSerializer(read_only=True)
+
+    password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+    password_confirmation = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+
     class Meta:
         model = User
-        fields = ('id', 'first_name', 'last_name', 'email', 'password', 'is_vehicle_owner', 'is_umusare_rider')
-    
+        fields = ["id", "first_name", "last_name","email","is_vehicle_owner","is_umusare_rider","password","password_confirmation","rider_profile","client_profile",]
+        extra_kwargs = {
+            'password': {'write_only': True,'required': True},
+            'password_confirmation': {'write_only': True,'required': True},
+        }
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError(_("This email address is already in use."))
+        return value
+
+    def validate(self, data):
+        if data['password'] != data.pop('password_confirmation'):
+            raise serializers.ValidationError(_("The passwords do not match."))
+        return data
+
     def create(self, validated_data):
-        password = validated_data.pop('password', None)
-        user = User(**validated_data)
-        if password is not None:
-            user.set_password(password)
+        password = validated_data.pop('password')
+        user = self.Meta.model(**validated_data)
+        user.set_password(password)
         user.save()
         return user
-    
-    def update(self, instance, validated_data):
-        password = validated_data.pop('password', None)
-        for key, value in validated_data.items():
-            setattr(instance, key, value)
-        if password is not None:
-            instance.set_password(password)
-        instance.save()
-        return instance
+
 
 class LoginSerializer(serializers.Serializer):
-    email =serializers.EmailField()
-    password =serializers.CharField(write_only=True)
+    email = serializers.EmailField()
+    password = serializers.CharField()
+
+    def validate(self, data):
+        email = data.get('email')
+        password = data.get('password')
+
+        if email and password:
+            user = authenticate(email=email, password=password)
+
+            if user:
+                if not user.is_active:
+                    raise serializers.ValidationError("User account is not active.")
+            else:
+                raise serializers.ValidationError("Unable to login with the given credentials.")
+        else:
+            raise serializers.ValidationError("Must provide email and password.")
+
+        data['user'] = user
+        return data
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        try:
+            user = User.objects.get(email=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError('Invalid email address')
+
+        if not user.is_active:
+            raise serializers.ValidationError('User account is inactive')
+
+        return value
+
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    new_password1 = serializers.CharField(max_length=128)
+    new_password2 = serializers.CharField(max_length=128)
+
+    def validate(self, data):
+        if data['new_password1'] != data['new_password2']:
+            raise serializers.ValidationError("Passwords do not match.")
+        return data
 
 
 class LogoutSerializer(serializers.Serializer):
