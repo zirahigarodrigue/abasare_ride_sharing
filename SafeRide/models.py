@@ -10,7 +10,7 @@ User = get_user_model()
 # Create your models here.
 class UmusareRider(models.Model):
     user = models.OneToOneField(User, verbose_name="User", related_name="rider_profile", on_delete=models.CASCADE)
-    phone_number =PhoneNumberField(verbose_name = "Phone Number",blank=True)
+    phone_number =models.CharField(verbose_name = "Phone Number",blank=True ,max_length=20)
     bank_account =models.CharField(verbose_name = "Bank_Account",max_length=100,blank=True)
     driving_license_category = models.CharField(verbose_name="Category", max_length=10)
     profile_image = models.ImageField(
@@ -88,7 +88,7 @@ class UmusareWage(models.Model):
 
 class Clients(models.Model):
     user = models.OneToOneField(User, verbose_name="User", related_name="client_profile", on_delete=models.CASCADE)
-    phone_number = PhoneNumberField(verbose_name = "Phone Number",blank=True)
+    phone_number = models.CharField(verbose_name = "Phone Number",blank=True,max_length=20)
     def __str__(self):
         return '{} {}'.format(self.user.first_name,self.user.last_name)
 
